@@ -12,70 +12,201 @@ static constexpr const char* default_sdf = R"(float is0_default_sdf(vec3 pos) {
 )";
 
 static constexpr const char* ray_marcher_begin = R"(#version 430
-
-in vec2 vTexCoords;
-uniform float _time;
-#include "Cool/res/shaders/camera.glsl"
-
-// ----- Ray marching options ----- //
-#define MAX_STEPS 150
-#define MAX_DIST 200.
-#define SURF_DIST 0.0001
-#define NORMAL_DELTA 0.0001
-
-#define saturate(v) clamp(v, 0., 1.)
-
+#define MAX_DIST 1e5
+in vec2 vTexCoords; 
+uniform float _time; 
+#include "Cool/res/shaders/camera.glsl" 
 )";
 
 static constexpr const char* ray_marcher_end = R"(
 
-float rayMarching(vec3 ro, vec3 rd) {
-    float t = 0.;
- 	
-    for (int i = 0; i < MAX_STEPS; i++) {
-    	vec3 pos = ro + rd * t;
-        float d = is0_main_sdf(pos);
-        t += d;
-        // If we are very close to the object, consider it as a hit and exit this loop
-        if( t > MAX_DIST || abs(d) < SURF_DIST*0.99) break;
+const float u_AbsorptionCoefficient = 0.1f;
+const float u_AbsorptionCutoff = 0.01f;
+const float u_MarchMultiplier = 0.5f;
+const int   u_MaxVolumeMarchSteps = 200;
+const int   u_MaxVolumeLightMarchSteps = 100;
+const int   u_MaxSdfSphereSteps = 150;
+const int   u_MaxOpaqueShadowMarchSteps = 200;
+
+// Adapted from Christopher Wallis' great article https://wallisc.github.io/rendering/2020/05/02/Volumetric-Rendering-Part-2.html
+#define PI 3.141592654
+
+#define NUM_LIGHTS 3
+#define NUM_LIGHT_COLORS 3
+
+#define INVALID_MATERIAL_ID int(-1)
+#define LARGE_NUMBER 1e20
+#define EPSILON 0.0001
+#define CAST_VOLUME_SHADOW_ON_OPAQUES 1
+
+struct OrbLightDescription
+{
+    vec3 Position;
+    vec3 LightColor;
+};
+
+vec3 GetLightColor(int lightIndex)
+{
+    switch(lightIndex % NUM_LIGHT_COLORS)
+    {
+        case 0: return vec3(255, 150, 243);
+        case 1: return vec3(138, 249, 255);
     }
-    return t;
+    return vec3(129, 255, 115);
 }
 
-vec3 getNormal(vec3 p) {
-    const float h = NORMAL_DELTA;
-	const vec2 k = vec2(1., -1.);
-    return normalize( k.xyy * is0_main_sdf( p + k.xyy*h ) + 
-                      k.yyx * is0_main_sdf( p + k.yyx*h ) + 
-                      k.yxy * is0_main_sdf( p + k.yxy*h ) + 
-                      k.xxx * is0_main_sdf( p + k.xxx*h ) );
+OrbLightDescription GetLight(int lightIndex)
+{
+    const float lightMultiplier = 17.0f;
+    float theta = _time * 0.7 + float(lightIndex) * PI * 2.0 / float(NUM_LIGHT_COLORS);
+    float radius = 18.5f;
+    
+    OrbLightDescription orbLight;
+    orbLight.Position = vec3(radius * cos(theta), 6.0 + sin(theta * 2.0) * 2.5, radius * sin(theta));
+    orbLight.LightColor =  GetLightColor(lightIndex) * lightMultiplier / 20.;
+
+    return orbLight;
 }
 
-vec3 render(vec3 ro, vec3 rd) {
-    vec3 finalCol = vec3(0.3, 0.7, 0.98);
+float GetLightAttenuation(float distanceToLight)
+{
+    return 1.0 / pow(distanceToLight, 2.);
+}
+
+float IntersectVolumetric(in vec3 rayOrigin, in vec3 rayDirection, float maxT)
+{
+    // Precision isn't super important, just want a decent starting point before 
+    // ray marching with fixed steps
+	float precis = 0.5; 
+    float t = 0.0f;
+    for(int i=0; i<u_MaxSdfSphereSteps; i++ )
+    {
+	    float result = is0_main_sdf( rayOrigin+rayDirection*t);
+        if( result < (precis) || t>maxT ) break;
+        t += result;
+    }
+    return ( t>=maxT ) ? -1.0 : t;
+}
+
+vec3 Diffuse(in vec3 normal, in vec3 lightVec, in vec3 diffuse)
+{
+    float nDotL = dot(normal, lightVec);
+    return clamp(nDotL * diffuse, 0.0, 1.0);
+}
+
+vec3 GetAmbientLight()
+{
+	return 10.2 * vec3(0.03, 0.018, 0.018);
+}
+
+float GetFogDensity(vec3 position, float sdfDistance)
+{
+    const float maxSDFMultiplier = 1.0;
+    bool insideSDF = sdfDistance < 0.0;
+    float sdfMultiplier = insideSDF ? min(abs(sdfDistance), maxSDFMultiplier) : 0.0;
+
+    return sdfMultiplier;
+}
+
+float BeerLambert(float absorption, float dist)
+{
+    return exp(-absorption * dist);
+}
+
+float GetLightVisiblity(in vec3 rayOrigin, in vec3 rayDirection, in float maxT, in int maxSteps, in float marchSize)
+{
+    float t = 0.0f;
+    float lightVisibility = 1.0f;
+    float signedDistance = 0.0;
+    for(int i = 0; i < maxSteps; i++)
+    {                       
+        t += max(marchSize, signedDistance);
+        if(t > maxT || lightVisibility < u_AbsorptionCutoff) break;
+
+        vec3 position = rayOrigin + t*rayDirection;
+
+        signedDistance = is0_main_sdf(position);
+        if(signedDistance < 0.0)
+        {
+            lightVisibility *= BeerLambert(u_AbsorptionCoefficient * GetFogDensity(position, signedDistance), marchSize);
+        }
+    }
+    return lightVisibility;
+}
+
+
+float Luminance(vec3 color)
+{
+    return (color.r * 0.3) + (color.g * 0.59) + (color.b * 0.11);
+}
+
+bool IsColorInsignificant(vec3 color)
+{
+    const float minValue = 0.009;
+    return Luminance(color) < minValue;
+}
+
+vec3 Render(vec3 rayOrigin, vec3 rayDirection)
+{
+    float depth = LARGE_NUMBER;
+    vec3 opaqueColor = vec3(0.);
     
-    float d = rayMarching(ro, rd);
-    
-    if (d < MAX_DIST) {
-      vec3 p = ro + rd * d;
-      vec3 normal = getNormal(p); 
-      //vec3 ref = reflect(rd, normal);
-      
-      //float sunFactor = saturate(dot(normal, nSunDir));
-      //float sunSpecular = pow(saturate(dot(nSunDir, ref)), specularStrength); // Phong
-    
-      finalCol = normal * 0.5 + 0.5;
+    float volumeDepth = IntersectVolumetric(rayOrigin, rayDirection, depth);
+    float opaqueVisiblity = 1.0f;
+    vec3 volumetricColor = vec3(0.0f);
+    if(volumeDepth > 0.)
+    {
+        const vec3 volumeAlbedo = vec3(0.8);
+        float marchSize = 0.6f * u_MarchMultiplier;
+        float distanceInVolume = 0.0f;
+        float signedDistance = 0.0;
+        for(int i = 0; i < u_MaxVolumeMarchSteps; i++)
+        {
+            volumeDepth += max(marchSize, signedDistance);
+            if(volumeDepth > depth || opaqueVisiblity < u_AbsorptionCutoff) break;
+            
+            vec3 position = rayOrigin + volumeDepth*rayDirection;
+
+            signedDistance = is0_main_sdf(position);
+			if(signedDistance < 0.0f)
+            {
+                distanceInVolume += marchSize;
+                float previousOpaqueVisiblity = opaqueVisiblity;
+                opaqueVisiblity *= BeerLambert(u_AbsorptionCoefficient * GetFogDensity(position, signedDistance), marchSize);
+                float absorptionFromMarch = previousOpaqueVisiblity - opaqueVisiblity;
+                
+                for(int lightIndex = 0; lightIndex < NUM_LIGHTS; lightIndex++)
+    			{
+                    float lightVolumeDepth = 0.0f;
+                    vec3 lightDirection = (GetLight(lightIndex).Position - position);
+                    float lightDistance = length(lightDirection);
+                    lightDirection /= lightDistance;
+                    
+                    vec3 lightColor = GetLight(lightIndex).LightColor * GetLightAttenuation(lightDistance); 
+                    if(IsColorInsignificant(lightColor)) continue;
+                    
+                    float lightMarchSize = 0.65f * u_MarchMultiplier;
+                    float lightVisiblity = GetLightVisiblity(position, lightDirection, lightDistance, u_MaxVolumeLightMarchSteps, lightMarchSize); 
+                    volumetricColor += absorptionFromMarch * lightVisiblity * volumeAlbedo * lightColor;
+                }
+                volumetricColor += absorptionFromMarch * volumeAlbedo * GetAmbientLight();
+            }
+        }
     }
     
-    finalCol = saturate(finalCol);
-    finalCol = pow(finalCol, vec3(0.4545)); // Gamma correction
-    return finalCol;
+    return volumetricColor + opaqueVisiblity * opaqueColor;
 }
 
-void main() {
-    vec3 ro = cool_ray_origin();
-    vec3 rd = cool_ray_direction();
-    gl_FragColor = vec4(render(ro, rd), 1.);
+vec3 GammaCorrect(vec3 color) 
+{
+    return pow(color, vec3(2.));
+}
+
+void main()
+{
+    vec3 ro = cool_ray_origin(); 
+    vec3 rd = cool_ray_direction(); 
+    gl_FragColor = vec4(GammaCorrect(Render(ro, rd)), 1.);
 }
 )";
 
