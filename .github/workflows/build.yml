@@ -115,6 +115,12 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v2
+    - name: Build
+      run: echo ${{ github.sha }} > Release.txt
+    - name: Test
+      run: cat Release.txt
     - name: Release
       uses: softprops/action-gh-release@v1
       if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: Release.txt
