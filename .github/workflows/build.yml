@@ -1,9 +1,6 @@
 name: Build exe
 
-on :
-  push:
-    tags:
-      - "v*.*.*"
+on: workflow_dispatch
 
 env:
   TARGET: CoolLab # Should be the name of the target you created in your CMakeLists.txt and want to build and run
@@ -31,32 +28,27 @@ jobs:
     - name: Look for path
       run: ls ${{github.workspace}}\bin
 
-    # - name: Create Release
-    #   id: create_release
-    #   uses: actions/create-release@v1
-    #   env:
-    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    #   with:
-    #     tag_name: ${{ github.ref }}
-    #     release_name: TEST
-    #     draft: false
-    #     prerelease: false
-
-    # - name: Upload assets
-    #   id: upload-release-asset 
-    #   uses: actions/upload-release-asset@v1
-    #   env:
-    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    #   with:
-    #     upload_url: https://api.github.com/badbois/Lab/tree/main/.github
-    #     asset_path: ${{github.workspace}}\bin\Release.tar.gz
-    #     asset_name: program-${{ runner.os }}.tar.gz
-    #     asset_content_type: application/tar.gz
-
-    - name: Release
-      uses: softprops/action-gh-release@v1
+    - name: Create Release
+      id: TEST
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        files: ${{github.workspace}}\bin\Release.tar.gz
+        tag_name: ${{ github.ref }}
+        release_name: TEST
+        draft: false
+        prerelease: false
+
+    - name: Upload assets
+      id: upload-release-asset 
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: https://api.github.com/badbois/Lab/tree/main/.github
+        asset_path: ${{github.workspace}}\bin\Release.tar.gz
+        asset_name: program-${{ runner.os }}.tar.gz
+        asset_content_type: application/tar.gz
     
     - name: Look for path after
       run: ls ${{github.workspace}}\bin
