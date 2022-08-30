@@ -50,9 +50,12 @@ jobs:
     #     asset_name: program-${{ runner.os }}.tar.gz
     #     asset_content_type: application/tar.gz
 
+    - name: print ref
+      run: echo github.ref
+
     - name: Release
       uses: softprops/action-gh-release@v1
-      if: startsWith(github.ref, 'v')
+      if: startsWith(github.ref, 'refs')
       with:
         files: ${{github.workspace}}\bin\Release.tar.gz
     
