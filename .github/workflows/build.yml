@@ -20,13 +20,18 @@ jobs:
       run: cmake -B ${{github.workspace}}\build -T ClangCL
 
     - name: Build
-      run: cmake --build ${{github.workspace}}\build --config Release --target ${{env.TARGET}}
+      run: echo ${{ github.sha }} > Release.txt
+    - name: Test
+      run: cat Release.txt
 
-    - name: Zip building directory
-      run: tar cvzf ${{github.workspace}}\bin\Release.tar.gz ${{github.workspace}}\bin\Release
+    # - name: Build
+    #   run: cmake --build ${{github.workspace}}\build --config Release --target ${{env.TARGET}}
+
+    # - name: Zip building directory
+    #   run: tar cvzf ${{github.workspace}}\bin\Release.tar.gz ${{github.workspace}}\bin\Release
     
-    - name: Look for path
-      run: ls ${{github.workspace}}\bin
+    # - name: Look for path
+    #   run: ls ${{github.workspace}}\bin
 
     # - name: Create Release
     #   id: TEST_ID
@@ -51,13 +56,13 @@ jobs:
     #     asset_content_type: application/tar.gz
 
     - name: print ref
-      run: echo github.ref
+      run: echo ${{ github.refs }}
 
     - name: Release
       uses: softprops/action-gh-release@v1
       if: startsWith(github.ref, 'refs')
       with:
-        files: ${{github.workspace}}\bin\Release.tar.gz
+        files: Release.txt
     
     - name: Look for path after
       run: ls ${{github.workspace}}\bin
