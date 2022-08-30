@@ -1,6 +1,9 @@
 name: Build exe
 
-on: workflow_dispatch
+on :
+  push:
+    tags:
+      - "v*.*.*"
 
 env:
   TARGET: CoolLab # Should be the name of the target you created in your CMakeLists.txt and want to build and run
@@ -52,7 +55,6 @@ jobs:
 
     - name: Release
       uses: softprops/action-gh-release@v1
-      if: startsWith(github.ref, 'refs/tags/')
       with:
         files: ${{github.workspace}}\bin\Release.tar.gz
     
