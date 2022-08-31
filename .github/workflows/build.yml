@@ -68,7 +68,7 @@ jobs:
       #   submodules: recursive
 
     - name: Use clang 14
-      run: $(brew --prefix llvm@14)/bin/clang
+      run: '$(brew --prefix llvm@14)/bin/clang'
 
     # - name: Configure CMake
     #   run: cmake -B ${{github.workspace}}/build -D CMAKE_BUILD_TYPE=Release -D CMAKE_C_COMPILER=clang -D CMAKE_CXX_COMPILER=clang++
