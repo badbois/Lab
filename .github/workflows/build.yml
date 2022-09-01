@@ -7,8 +7,27 @@ env:
 
 
 jobs:
+
+  Create_tag:
+    name: Create tag
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+    
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+      with:
+        tag_name: alpha.1.0
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: false
 #-----------------------------------------------------------------------------------------------
   Windows_Clang_Release:
+    needs: Create_tag
     name: Windows Clang Release
     runs-on: windows-2022
     steps:
@@ -31,7 +50,8 @@ jobs:
       with:
         files: Windows_Release.zip
 #-----------------------------------------------------------------------------------------------
-  Linux_Clang_Release: 
+  Linux_Clang_Release:
+    needs: Create_tag
     name: Linux Clang Release
     runs-on: ubuntu-22.04
     steps:
@@ -51,8 +71,7 @@ jobs:
     - name: Zip building directory
       run: |
             cd ${{github.workspace}}/bin
-            ls
-            zip -r Linux_Release.zip ./Release
+            tar -zcvf Linux_Release.zip ./Release
             
     - name: Release
       uses: softprops/action-gh-release@v1
@@ -61,7 +80,8 @@ jobs:
         files: Linux_Release.zip
 
 #-----------------------------------------------------------------------------------------------
-  MacOS_Clang_Release: 
+  MacOS_Clang_Release:
+    needs: Create_tag
     name: MacOS Clang Release
     runs-on: macos-11
     steps:
@@ -78,8 +98,7 @@ jobs:
     - name: Zip building directory
       run: |
             cd ${{github.workspace}}/bin
-            ls
-            zip -r MacOS_Release.zip ./Release
+            zip MacOS_Release.zip ./Release
 
     - name: Release
       uses: softprops/action-gh-release@v1
