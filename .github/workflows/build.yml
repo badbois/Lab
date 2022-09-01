@@ -48,15 +48,11 @@ jobs:
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config Release --target ${{env.TARGET}}
 
-    - name: Move into Bin directory
-      run: cd ${{github.workspace}}/bin/bin
-
-    - name: where
-      run: ls
-
     - name: Zip building directory
-      run: zip -r Linux_Release.zip ./Release
-
+      run: |
+            cd ${{github.workspace}}/bin
+            zip -r Linux_Release.zip ./Release
+            
     - name: Release
       uses: softprops/action-gh-release@v1
       if: startsWith(github.ref, 'refs/tags/')
@@ -77,15 +73,11 @@ jobs:
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config Release --target ${{env.TARGET}}
-
-    - name: Move into Bin directory
-      run: cd ${{github.workspace}}/bin/bin
-
-    - name: where
-      run: ls
       
     - name: Zip building directory
-      run: zip -r MacOS_Release.zip ./Release
+      run: |
+            cd ${{github.workspace}}/bin
+            zip -r MacOS_Release.zip ./Release
 
     - name: Release
       uses: softprops/action-gh-release@v1
