@@ -51,13 +51,13 @@ jobs:
     - name: Zip building directory
       run: |
             cd ${{github.workspace}}/bin
-            tar -zcvf Linux_Release.tar.gz ./Release
+            tar -cvzf Linux_Release.tar.gz ./Release
             
     - name: Release
       uses: softprops/action-gh-release@v1
       if: startsWith(github.ref, 'refs/tags/')
       with:
-        files: Linux_Release.tar.gz
+        files: ${{github.workspace}}/bin/Linux_Release.tar.gz
 
 #-----------------------------------------------------------------------------------------------
   MacOS_Clang_Release:
@@ -77,11 +77,11 @@ jobs:
     - name: Zip building directory
       run: |
             cd ${{github.workspace}}/bin
-            zip -r MacOS_Release.zip ./
+            zip -r MacOS_Release.zip ./Release
 
     - name: Release
       uses: softprops/action-gh-release@v1
       if: startsWith(github.ref, 'refs/tags/')
       with:
-        files: MacOS_Release.zip
+        files: ${{github.workspace}}/bin/MacOS_Release.zip
 
