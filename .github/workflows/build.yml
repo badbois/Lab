@@ -51,6 +51,7 @@ jobs:
     - name: Zip building directory
       run: |
             cd ${{github.workspace}}/bin
+            ls
             zip -r Linux_Release.zip ./Release
             
     - name: Release
@@ -77,6 +78,7 @@ jobs:
     - name: Zip building directory
       run: |
             cd ${{github.workspace}}/bin
+            ls
             zip -r MacOS_Release.zip ./Release
 
     - name: Release
