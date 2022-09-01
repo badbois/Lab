@@ -22,9 +22,8 @@ jobs:
     - name: Build
       run: cmake --build ${{github.workspace}}\build --config Release --target ${{env.TARGET}}
 
-    - uses: edgarrc/action-7z@v1
-      with:
-        args: 7z a Windows_Release.zip ${{github.workspace}}\bin\Release
+    - name: Zip file
+      run: 7z a Windows_Release.zip ${{github.workspace}}\bin\Release
 
     - name: Release
       uses: softprops/action-gh-release@v1
@@ -49,8 +48,14 @@ jobs:
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config Release --target ${{env.TARGET}}
 
+    - name: Move into Bin directory
+      run: cd ${{github.workspace}}/bin/bin
+
+    - name: where
+      run: ls
+
     - name: Zip building directory
-      run: zip -r Linux_Release.zip ${{github.workspace}}/bin/Release
+      run: zip -r Linux_Release.zip ./Release
 
     - name: Release
       uses: softprops/action-gh-release@v1
@@ -74,7 +79,7 @@ jobs:
       run: cmake --build ${{github.workspace}}/build --config Release --target ${{env.TARGET}}
 
     - name: Move into Bin directory
-      run: cd ${{github.workspace}}/bin
+      run: cd ${{github.workspace}}/bin/bin
 
     - name: where
       run: ls
