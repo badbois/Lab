@@ -14,10 +14,10 @@ jobs:
     steps:
     - name : Test rename
       run: |
-      mkdir foo
-      dir
-      rename foo bar
-      dir
+            mkdir foo
+            dir
+            rename foo bar
+            dir
     # - uses: actions/checkout@v3
     #   with:
     #       submodules: recursive
@@ -43,10 +43,10 @@ jobs:
     steps:
     - name : Test rename
       run: |
-      mkdir foo
-      ls
-      mv foo bar
-      ls
+            mkdir foo
+            ls
+            mv foo bar
+            ls
     # - uses: actions/checkout@v3
     #   with:
     #     submodules: recursive
@@ -79,10 +79,10 @@ jobs:
 
     - name : Test rename
       run: |
-      mkdir foo
-      ls
-      mv foo bar
-      ls
+            mkdir foo
+            ls
+            mv foo bar
+            ls
     # - uses: actions/checkout@v3
     #   with:
     #     submodules: recursive
