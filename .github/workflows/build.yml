@@ -12,30 +12,27 @@ jobs:
     name: Windows Clang Release
     runs-on: windows-2022
     steps:
-    - name : Test rename
+    - uses: actions/checkout@v3
+      with:
+          submodules: recursive
+
+    - name: Configure CMake
+      run: cmake -B ${{github.workspace}}\build -T ClangCL
+
+    - name: Build
+      run: cmake --build ${{github.workspace}}\build --config Release --target ${{env.TARGET}}
+
+    - name: Zip file
       run: |
-            mkdir foo
-            ls
-            mv foo bar
-            ls
-    # - uses: actions/checkout@v3
-    #   with:
-    #       submodules: recursive
+            cd ${{github.workspace}}\bin\
+            mv Release CoolLab-Windows
+            7z a CoolLab-Windowse.zip CoolLab-Windows
 
-    # - name: Configure CMake
-    #   run: cmake -B ${{github.workspace}}\build -T ClangCL
-
-    # - name: Build
-    #   run: cmake --build ${{github.workspace}}\build --config Release --target ${{env.TARGET}}
-
-    # - name: Zip file
-    #   run: 7z a Windows_Release.zip ${{github.workspace}}\bin\Release
-
-    # - name: Release
-    #   uses: softprops/action-gh-release@v1
-    #   if: startsWith(github.ref, 'refs/tags/')
-    #   with:
-    #     files: Windows_Release.zip
+    - name: Release
+      uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: CoolLab-Windows.zip
 #-----------------------------------------------------------------------------------------------
   Linux_Clang_Release:
     name: Linux Clang Release
