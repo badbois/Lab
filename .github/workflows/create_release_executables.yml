@@ -1,9 +1,9 @@
-name: Build exe
+name: Create release executables
 
 on: workflow_dispatch
 
 env:
-  TARGET: CoolLab # Should be the name of the target you created in your CMakeLists.txt and want to build and run
+  TARGET: CoolLab
 
 
 jobs:
@@ -26,13 +26,12 @@ jobs:
       run: |
             cd ${{github.workspace}}\bin\
             mv Release CoolLab-Windows
-            7z a CoolLab-Windowse.zip CoolLab-Windows
+            7z a CoolLab-Windows.zip CoolLab-Windows
 
     - name: Release
       uses: softprops/action-gh-release@v1
-      if: startsWith(github.ref, 'refs/tags/')
       with:
-        files: CoolLab-Windows.zip
+        files: ${{github.workspace}}\bin\CoolLab-Windows.zip
 #-----------------------------------------------------------------------------------------------
   Linux_Clang_Release:
     name: Linux Clang Release
@@ -59,7 +58,6 @@ jobs:
             
     - name: Release
       uses: softprops/action-gh-release@v1
-      if: startsWith(github.ref, 'refs/tags/')
       with:
         files: ${{github.workspace}}/bin/CoolLab-Linux.tar.gz
 
@@ -86,7 +84,6 @@ jobs:
 
     - name: Release
       uses: softprops/action-gh-release@v1
-      if: startsWith(github.ref, 'refs/tags/')
       with:
         files: ${{github.workspace}}/bin/CoolLab-MacOS.zip
 
